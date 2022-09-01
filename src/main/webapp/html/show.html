@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <style>
+        #main {
+            width: 1200px;
+            height: 800px;
+        }
+    </style>
+    <script src="../js/echarts.min.js"></script>
+    <script src="../js/vue.js"></script>
+    <script src="../element-ui/lib/index.js"></script>
+    <link rel="stylesheet" href="../element-ui/lib/theme-chalk/index.css">
+    <script src="../js/axios-0.18.0.js"></script>
+</head>
+<body>
+<div id="main">
+    <!--    展示数据的表格-->
+    <div>
+        <el-container>
+            <el-aside width="40%">
+                <template>
+                    <!-- :data 绑定数据-->
+                    <el-table
+                            :data="wlList"
+                            style="width: 100%"
+                    >
+
+                        <el-table-column
+                                type="index"
+                                align="center"
+                                width="50">
+                        </el-table-column>
+
+                        <el-table-column
+                                prop="wl"
+                                align="center"
+                                label="水位">
+                        </el-table-column>
+                    </el-table>
+
+                    <!-- :data 绑定数据-->
+                    <el-table
+                            :data="tdsList"
+                            style="width: 100%"
+                    >
+
+                        <el-table-column
+                                type="index"
+                                align="center"
+                                width="50">
+                        </el-table-column>
+
+                        <el-table-column
+                                prop="tds"
+                                align="center"
+                                label="水质">
+                        </el-table-column>
+                    </el-table>
+
+                    <!-- :data 绑定数据-->
+                    <el-table
+                            :data="volList"
+                            style="width: 100%"
+                    >
+
+                        <el-table-column
+                                type="index"
+                                align="center"
+                                width="50">
+                        </el-table-column>
+
+                        <el-table-column
+                                prop="vol"
+                                align="center"
+                                label="电压">
+                        </el-table-column>
+                    </el-table>
+
+                </template>
+            </el-aside>
+        </el-container>
+    </div>
+
+    <!--    图表大小随意，但必须设置大小-->
+    <div id="wl_pic" style="height: 400px;width: 600px"></div>
+    <div id="tds_pic" style="height: 400px;width: 600px"></div>
+    <div id="vol_pic" style="height: 400px;width: 600px"></div>
+</div>
+
+<script>
+    new Vue({
+        el: "#main",
+        mounted() {
+            this.queryInfo();
+            this.Wl_pic();
+            this.Tds_pic();
+            this.Vol_pic();
+            if (this.timer) {
+                clearInterval(this.timer)
+            } else {
+                //一秒查询更新一次数据
+                this.timer = setInterval(() => {
+                    setTimeout(this.queryInfo(), 0)
+                }, 1000)
+            }
+        },
+
+        methods: {
+            //查询并更新数据
+            queryInfo() {
+                let _this = this;
+                axios({
+                    method: "get",
+                    url: "http://localhost:8080/demo/selectAll"
+                }).then(function (resp) {
+                    if (resp.data !== "success") {
+                        alert(resp.data);
+                    }
+                    //更新数据
+                    _this.getWlList();
+                    _this.getTdsList();
+                    _this.getVolList();
+                    //生成图表所需数据格式
+                    _this.updateWl();
+                    _this.updateTds();
+                    _this.updateVol()
+                })
+            },
+            getWlList() {
+                let _this = this;
+                axios({
+                    method: "get",
+                    url: "http://localhost:8080/demo/wl"
+                }).then(function (resp) {
+                    _this.wlList = resp.data;
+                })
+            },
+            getTdsList() {
+                let _this = this;
+                axios({
+                    method: "get",
+                    url: "http://localhost:8080/demo/tds"
+                }).then(function (resp) {
+                    _this.tdsList = resp.data;
+                })
+            },
+            getVolList() {
+                let _this = this;
+                axios({
+                    method: "get",
+                    url: "http://localhost:8080/demo/vol"
+                }).then(function (resp) {
+                    _this.volList = resp.data;
+                })
+            },
+            //生成图表所需数据格式
+            updateWl() {
+                let length = this.wlList.length;
+                let val = this.wlList;
+                let wls = [];
+                for (let i = 0; i < length; i++) {
+                    wls.push([i, val[i].wl]);
+                }
+                this.wl = wls;
+            },
+            updateTds() {
+                let length = this.tdsList.length;
+                let val = this.tdsList;
+                let tds = [];
+                for (let i = 0; i < length; i++) {
+                    tds.push([i, val[i].tds]);
+                }
+                this.tds = tds;
+            },
+            updateVol() {
+                let length = this.volList.length;
+                let val = this.volList;
+                let vol = [];
+                for (let i = 0; i < length; i++) {
+                    vol.push([i, val[i].vol]);
+                }
+                this.vol = vol;
+            },
+            //初始化图表
+            Wl_pic() {
+                let _this = this;
+                //绑定id
+                var myChart = echarts.init(document.getElementById('wl_pic'));
+                option = {
+                    title: {
+                        text: 'Water Level'
+                    },
+                    tooltip: {
+                        trigger: 'axis',
+                        formatter: function (params) {
+                            param = params[0];
+                            return param.value[0] + '/' + param.value[1];
+                        },
+                        axisPointer: {
+                            animation: false
+                        }
+                    },
+                    xAxis: {
+                        type: 'value',
+                        splitLine: {
+                            show: false
+                        }
+                    },
+                    yAxis: {
+                        type: 'value',
+                        boundaryGap: [0, '100%'],
+                        splitLine: {
+                            show: false
+                        }
+                    },
+                    series: [
+                        {
+                            name: 'Fake Data',
+                            type: 'line',
+                            showSymbol: false,
+                            data: _this.wl
+                        }
+                    ]
+                };
+                setInterval(function () {
+                    for (let i = _this.wl.length; i > 1000 ; i--) {
+                        _this.wl.shift();
+                    }
+                    myChart.setOption({
+                        series: [
+                            {
+                                data: _this.wl
+                            }
+                        ]
+                    });
+                }, 1000);
+                option && myChart.setOption(option);
+            },
+            Tds_pic() {
+                let _this = this;
+                //绑定id
+                var myChart = echarts.init(document.getElementById('tds_pic'));
+                option = {
+                    title: {
+                        text: 'Water Quality'
+                    },
+                    tooltip: {
+                        trigger: 'axis',
+                        formatter: function (params) {
+                            param = params[0];
+                            return param.value[0] + '/' + param.value[1];
+                        },
+                        axisPointer: {
+                            animation: false
+                        }
+                    },
+                    xAxis: {
+                        type: 'value',
+                        splitLine: {
+                            show: false
+                        }
+                    },
+                    yAxis: {
+                        type: 'value',
+                        boundaryGap: [0, '100%'],
+                        splitLine: {
+                            show: false
+                        }
+                    },
+                    series: [
+                        {
+                            name: 'Fake Data',
+                            type: 'line',
+                            showSymbol: false,
+                            data: _this.tds
+                        }
+                    ]
+                };
+                setInterval(function () {
+                    for (let i = _this.tds.length; i > 100 ; i--) {
+                        _this.tds.shift();
+                    }
+                    myChart.setOption({
+                        series: [
+                            {
+                                data: _this.tds
+                            }
+                        ]
+                    });
+                }, 1000);
+                option && myChart.setOption(option);
+            },
+            Vol_pic() {
+                let _this = this;
+                //绑定id
+                var myChart = echarts.init(document.getElementById('vol_pic'));
+                option = {
+                    title: {
+                        text: 'Water Voltage'
+                    },
+                    tooltip: {
+                        trigger: 'axis',
+                        formatter: function (params) {
+                            param = params[0];
+                            return param.value[0] + '/' + param.value[1];
+                        },
+                        axisPointer: {
+                            animation: false
+                        }
+                    },
+                    xAxis: {
+                        type: 'value',
+                        splitLine: {
+                            show: false
+                        }
+                    },
+                    yAxis: {
+                        type: 'value',
+                        boundaryGap: [0, '100%'],
+                        splitLine: {
+                            show: false
+                        }
+                    },
+                    series: [
+                        {
+                            name: 'Fake Data',
+                            type: 'line',
+                            showSymbol: false,
+                            data: _this.vol
+                        }
+                    ]
+                };
+                setInterval(function () {
+                    for (let i = _this.vol.length; i > 200 ; i--) {
+                        _this.vol.shift();
+                    }
+                    myChart.setOption({
+                        series: [
+                            {
+                                data: _this.vol
+                            }
+                        ]
+                    });
+                }, 1000);
+                option && myChart.setOption(option);
+            },
+            beforeDestroy() {
+                clearInterval(this.timer);
+                this.timer = null;
+            }
+        },
+        data() {
+            return {
+                wl: [{"wl":1345},{"wl":1875}],
+                tds: "",
+                vol: "",
+                wlList: "",
+                tdsList: "",
+                volList: "",
+                timer: null, //定时器名称
+            }
+        }
+
+    })
+
+</script>
+</body>
+</html>
